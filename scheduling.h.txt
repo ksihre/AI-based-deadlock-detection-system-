@@ -1,0 +1,36 @@
+#pragma once
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <chrono>
+#include "deadlock_sim.h"
+
+using namespace std;
+
+// OS thread simulation
+inline void simulateTransaction(LockManager& lm, string txnId, vector<string> resSeq, int burstTime, bool& simulation_running) {
+    for (const auto& rid : resSeq) {
+        bool granted = false;
+        
+        while (!granted && simulation_running) {
+            // NEW: Check if this transaction was killed by Sneha's Lock Manager
+            if (lm.isAborted(txnId)) {
+                cout << "  [OS] Thread " << txnId << " shutting down (Aborted).\n";
+                return; // Kill the thread
+            }
+            
+            granted = lm.requestLock(txnId, rid);
+            if (!granted) {
+                // If blocked, wait before retrying
+                this_thread::sleep_for(chrono::milliseconds(300)); 
+            }
+        }
+        
+        if(!simulation_running) return;
+        
+        // Simulate OS Burst Time
+        this_thread::sleep_for(chrono::milliseconds(burstTime * 100)); 
+    }
+    
+    lm.commitTransaction(txnId);
+}
